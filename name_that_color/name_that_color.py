@@ -48,7 +48,6 @@ class ntc:
 
     def name(self, color: str):
 
-        color = color.upper()  # not needed? ex: int('0xf', 0) and int('0xF', 0) both return 15
         if len(color) < 3 or len(color) > 7:
             return ["#000000", "Invalid Color: " + color, "#000000", "", False]
         elif len(color) % 3 == 0:
@@ -56,11 +55,8 @@ class ntc:
         elif len(color) == 4:
             color = "#" + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
 
-        rgb = self.rgb(color)  # unpack here rather than separate line?
-        r, g, b = rgb
-        hsl = self.hsl(color)  # again, unpack here rather than separate line?
-        h, s, l = hsl
-        ndf1 = ndf2 = ndf = 0  # no need to initialize these in python
+        r, g, b = self.rgb(color)
+        h, s, l = self.hsl(color)
         cl = df = -1
 
         for i, name in enumerate(self.names):
@@ -68,7 +64,7 @@ class ntc:
                 return ["#" + name[0], name[1], self.shadergb(name[2]), name[2], True]
 
             ndf1 = (r - name[3]) ** 2 + (g - name[4]) ** 2 + (b - name[5]) ** 2
-            ndf2 = abs((h - name[6]) ** 2) + (s - name[7]) ** 2 + abs((l - name[8]) ** 2)  # abs not needed?
+            ndf2 = (h - name[6]) ** 2 + (s - name[7]) ** 2 + (l - name[8]) ** 2  # TODO dist in h needs to be circular
             ndf = ndf1 + ndf2 * 2  # why is hsl distance doubled?
             if df < 0 or df > ndf:
                 df = ndf
@@ -81,12 +77,10 @@ class ntc:
     # // http://acko.net/dev/farbtastic
     def hsl(self, color):
 
-        # instead, call self.rgb and unpack on same line?
-        rgb = [int('0x' + color[1:3], 0) / 255, int('0x' + color[3:5], 0) / 255, int('0x' + color[5:7], 0) / 255]
-        r, g, b = rgb
+        r, g, b = [n / 255 for n in self.rgb(color)]
 
-        min_color = min(r, min(g, b))
-        max_color = max(r, max(g, b))
+        min_color = min(r, g, b)
+        max_color = max(r, g, b)
         delta = max_color - min_color
         l = (min_color + max_color) / 2
 
@@ -96,12 +90,12 @@ class ntc:
 
         h = 0
         if delta > 0:
-            if max_color == r and max_color != g:
+            if max_color == r:
                 h += (g - b) / delta
-            if max_color == g and max_color != b:
-                h += (2 + (b - r) / delta)
-            if max_color == b and max_color != r:
-                h += (4 + (r - g) / delta)
+            elif max_color == g:
+                h += 2 + (b - r) / delta
+            elif max_color == b:
+                h += 4 + (r - g) / delta
             h /= 6
         return [int(h * 255), int(s * 255), int(l * 255)]
 
