@@ -33,6 +33,7 @@
 #
 # */
 
+import math
 from name_that_color import SHADES, NAMES
 
 
@@ -56,15 +57,29 @@ class ntc:
             color = "#" + color[1] + color[1] + color[2] + color[2] + color[3] + color[3]
 
         r, g, b = self.rgb(color)
+
         h, s, l = self.hsl(color)
+        hue_deg = h / 255 * 360
+        hue_rad = math.radians(hue_deg)
+        hsl_x = math.cos(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
+        hsl_y = math.sin(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
+
         cl = df = -1
 
         for i, name in enumerate(self.names):
             if color == "#" + name[0]:
                 return ["#" + name[0], name[1], self.shadergb(name[2]), name[2], True]
 
-            ndf1 = (r - name[3]) ** 2 + (g - name[4]) ** 2 + (b - name[5]) ** 2
-            ndf2 = (h - name[6]) ** 2 + (s - name[7]) ** 2 + (l - name[8]) ** 2  # TODO dist in h needs to be circular
+            color_r, color_g, color_b = name[3:6]
+            ndf1 = (r - color_r) ** 2 + (g - color_g) ** 2 + (b - color_b) ** 2
+
+            color_h, color_s, color_l = name[6:9]
+            color_hue_deg = color_h / 255 * 360
+            color_hue_rad = math.radians(color_hue_deg)
+            color_hsl_x = math.cos(color_hue_rad) * color_s * (max(color_r, color_g, color_b) - min(color_r, color_g, color_b)) / 255
+            color_hsl_y = math.sin(color_hue_rad) * color_s * (max(color_r, color_g, color_b) - min(color_r, color_g, color_b)) / 255
+            ndf2 = (hsl_x - color_hsl_x) ** 2 + (hsl_y - color_hsl_y) ** 2 + (l - color_l) ** 2
+
             ndf = ndf1 + ndf2 * 2  # why is hsl distance doubled?
             if df < 0 or df > ndf:
                 df = ndf
