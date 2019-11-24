@@ -65,7 +65,6 @@ class ntc:
         hue_rad = math.radians(hue_deg)
         hsl_x = math.cos(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
         hsl_y = math.sin(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
-        print(h, s, l, hue_deg, hsl_x, hsl_y)
 
         closest_index = closest_dist = -1
 
@@ -84,7 +83,6 @@ class ntc:
             hsl_dist = (hsl_x - color_hsl_x) ** 2 + (hsl_y - color_hsl_y) ** 2 + (l - color_l) ** 2
 
             combined_dist = rgb_dist + hsl_dist * 2  # why is hsl distance doubled?
-            print(rgb_dist, hsl_dist, combined_dist, name)
             if closest_dist < 0 or closest_dist > combined_dist:
                 closest_dist = combined_dist
                 closest_index = i
