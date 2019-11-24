@@ -34,18 +34,27 @@
 # */
 
 import math
+import pandas as pd
 from name_that_color import SHADES, NAMES
 
 
 class ntc:
 
     def __init__(self):
-        self.names = NAMES.copy()
-        for i, name in enumerate(self.names):
-            color = "#" + self.names[i][0]
-            rgb = self.rgb(color)
-            hsl = self.hsl(color)
-            self.names[i].extend([rgb[0], rgb[1], rgb[2], hsl[0], hsl[1], hsl[2]])
+        colors = pd.DataFrame(NAMES)
+        colors.columns = ['hex_code', 'shade_name', 'basic_name']
+
+        colors[['r', 'g', 'b']] = pd.DataFrame(colors['hex_code'].apply(self.rgb).to_list())
+        colors[['h', 's', 'l']] = pd.DataFrame(colors['hex_code'].apply(self.hsl).to_list())
+        colors['max_color'] = colors[['r', 'g', 'b']].apply(max, axis=1)
+        colors['min_color'] = colors[['r', 'g', 'b']].apply(min, axis=1)
+        colors['chroma'] = colors['max_color'] - colors['min_color']
+        colors['hsl_x'] = (colors['h'] * 360 / 255).apply(math.radians).apply(math.cos) * colors['s'] * colors['chroma'] / 255
+        colors['hsl_y'] = (colors['h'] * 360 / 255).apply(math.radians).apply(math.sin) * colors['s'] * colors['chroma'] / 255
+
+        colors.set_index(colors['hex_code'], inplace=True)
+
+        self.names = colors
 
     # This has become functionally different from source, "Name that Color" by Chirag Mehta
     # Distance in HSL space was treated as Cartesian, but has now been updated to "bi-hexcone" model
@@ -66,35 +75,26 @@ class ntc:
         hsl_x = math.cos(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
         hsl_y = math.sin(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
 
-        closest_index = closest_dist = -1
+        rgb_dist = (r - self.names['r']) ** 2 + (g - self.names['g']) ** 2 + (b - self.names['b']) ** 2
+        hsl_dist = (hsl_x - self.names['hsl_x']) ** 2 + (hsl_y - self.names['hsl_y']) ** 2 + (l - self.names['l']) ** 2
+        combined_dist = rgb_dist + hsl_dist * 2  # why is hsl distance doubled?
 
-        for i, name in enumerate(self.names):
-            if color == "#" + name[0]:
-                return ["#" + name[0], name[1], self.shadergb(name[2]), name[2], True]
+        closest_index = combined_dist.idxmin()
 
-            color_r, color_g, color_b = name[3:6]
-            rgb_dist = (r - color_r) ** 2 + (g - color_g) ** 2 + (b - color_b) ** 2
-
-            color_h, color_s, color_l = name[6:9]
-            color_hue_deg = color_h / 255 * 360
-            color_hue_rad = math.radians(color_hue_deg)
-            color_hsl_x = math.cos(color_hue_rad) * color_s * (max(color_r, color_g, color_b) - min(color_r, color_g, color_b)) / 255
-            color_hsl_y = math.sin(color_hue_rad) * color_s * (max(color_r, color_g, color_b) - min(color_r, color_g, color_b)) / 255
-            hsl_dist = (hsl_x - color_hsl_x) ** 2 + (hsl_y - color_hsl_y) ** 2 + (l - color_l) ** 2
-
-            combined_dist = rgb_dist + hsl_dist * 2  # why is hsl distance doubled?
-            if closest_dist < 0 or closest_dist > combined_dist:
-                closest_dist = combined_dist
-                closest_index = i
-
-        return ["#000000", "Invalid Color: " + color, "#000000", "", False] if closest_index < 0 else \
-            ["#" + self.names[closest_index][0], self.names[closest_index][1], self.shadergb(self.names[closest_index][2]), self.names[closest_index][2], False]
+        return [
+            "#" + closest_index,
+            self.names['shade_name'][closest_index],
+            self.shadergb(self.names['basic_name'][closest_index]),
+            self.names['basic_name'][closest_index],
+            closest_index == color
+        ]
 
     # // adopted from: Farbtastic 1.2
     # // http://acko.net/dev/farbtastic
-    def hsl(self, color):
+    @staticmethod
+    def hsl(color):
 
-        r, g, b = [n / 255 for n in self.rgb(color)]
+        r, g, b = [n / 255 for n in ntc.rgb(color)]
 
         min_color = min(r, g, b)
         max_color = max(r, g, b)
@@ -118,11 +118,9 @@ class ntc:
 
     # // adopted from: Farbtastic 1.2
     # // http://acko.net/dev/farbtastic
-    def rgb(self, color):
+    @staticmethod
+    def rgb(color):
         return [int('0x' + color[1:3], 0), int('0x' + color[3:5], 0),  int('0x' + color[5:7], 0)]
 
     def shadergb(self, shadename):
-        for i, shade in enumerate(SHADES):
-            if shadename == shade[1]:
-                return "#" + shade[0]
-        return "#000000"
+        return "#" + self.names.loc[self.names['shade_name'] == shadename]['hex_code'][0]
