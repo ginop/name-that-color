@@ -43,6 +43,7 @@ class ntc:
     def __init__(self):
         colors = pd.DataFrame(NAMES)
         colors.columns = ['hex_code', 'shade_name', 'basic_name']
+        colors['hex_code'] = colors['hex_code'].apply(lambda code: '#' + code)
 
         colors[['r', 'g', 'b']] = pd.DataFrame(colors['hex_code'].apply(self.rgb).to_list())
         colors[['h', 's', 'l']] = pd.DataFrame(colors['hex_code'].apply(self.hsl).to_list())
