@@ -62,7 +62,38 @@ class ntc:
         closest_index = combined_dist.idxmin()
 
         return [
-            "#" + closest_index,
+            closest_index,
+            self.names['shade_name'][closest_index],
+            self.shadergb(self.names['basic_name'][closest_index]),
+            self.names['basic_name'][closest_index],
+            closest_index == color
+        ]
+
+    def name_by_rgb(self, color: str):
+        r, g, b = self.rgb(color)
+        rgb_dist = (r - self.names['r']) ** 2 + (g - self.names['g']) ** 2 + (b - self.names['b']) ** 2
+        closest_index = rgb_dist.idxmin()
+
+        return [
+            closest_index,
+            self.names['shade_name'][closest_index],
+            self.shadergb(self.names['basic_name'][closest_index]),
+            self.names['basic_name'][closest_index],
+            closest_index == color
+        ]
+
+    def name_by_hsl(self, color: str):
+        r, g, b = self.rgb(color)
+        h, s, l = self.hsl(color)
+        hue_deg = h / 255 * 360
+        hue_rad = math.radians(hue_deg)
+        hsl_x = math.cos(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
+        hsl_y = math.sin(hue_rad) * s * (max(r, g, b) - min(r, g, b)) / 255
+        hsl_dist = (hsl_x - self.names['hsl_x']) ** 2 + (hsl_y - self.names['hsl_y']) ** 2 + (l - self.names['l']) ** 2
+        closest_index = hsl_dist.idxmin()
+
+        return [
+            closest_index,
             self.names['shade_name'][closest_index],
             self.shadergb(self.names['basic_name'][closest_index]),
             self.names['basic_name'][closest_index],
@@ -103,4 +134,4 @@ class ntc:
         return [int('0x' + color[1:3], 0), int('0x' + color[3:5], 0),  int('0x' + color[5:7], 0)]
 
     def shadergb(self, shadename):
-        return "#" + self.names.loc[self.names['shade_name'] == shadename]['hex_code'][0]
+        return self.names.loc[self.names['shade_name'] == shadename]['hex_code'][0]
